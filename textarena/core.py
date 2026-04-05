@@ -25,6 +25,7 @@ class State:
         self.max_turns = max_turns 
         self.num_players = num_players
         self.current_player_id = 0
+        self.reward_hack = False
 
     def check_turn_limit(self):
         return self.turn >= self.max_turns and self.done == False
@@ -50,6 +51,7 @@ class State:
                 
         self.observations = {pid: [] for pid in range(self.num_players)}
         self.rewards = None
+        self.reward_hack = False
         self.logs = []
 
         # set role mapping
@@ -87,7 +89,7 @@ class State:
         return (self.done, step_info)
 
     def close(self):
-        return self.rewards, self.game_info
+        return self.rewards, self.game_info, self.reward_hack
 
 
 class Env(ABC):
