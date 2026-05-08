@@ -4,6 +4,26 @@ from typing import Any, Dict, Optional, Tuple, List
 import textarena as ta
 from textarena.envs.Sudoku.renderer import create_board_str
 
+
+"""
+"Examples:\n"
+            "- **Valid Move**:\n"
+            "  - Grid Snippet Before Move:\n"
+            "  \n"
+            "  - Move: `[5 3 7]`\n"
+            "  - Explanation: Placing 7 at row 5, column 3 does not violate any Sudoku rules.\n\n"
+            "- **Invalid Move** (Overwriting a pre-filled cell):\n"
+            "  - Grid Snippet Before Move:\n"
+            "  \n"
+            "  - Move: `[1 1 9]`\n"
+            "  - Explanation: Cell (1,1) is already filled with 5. You cannot overwrite it.\n\n"
+            "- **Invalid Move** (Violating Sudoku rules):\n"
+            "  - Grid Snippet Before Move:\n"
+            "  \n"
+            "  - Move: `[1 3 5]`\n"
+            "  - Explanation: Placing 5 in row 1, column 3 violates the rule since 5 already exists in row 1.\n\n"
+"""
+
 class SudokuEnv(ta.Env):
     def __init__(self, clues: int= 30, max_turns: Optional[int] = 100):
         """
@@ -106,7 +126,7 @@ class SudokuEnv(ta.Env):
         return len(solutions)
     
     def reset(self, num_players: int, seed: Optional[int] = None):
-        self.state = ta.SinglePlayerState(num_players=num_players, max_turns=self.max_turns, seed=seed) ## intitialise the game state
+        self.state = ta.SinglePlayerState(num_players=num_players, max_turns=self.max_turns, seed=seed, error_allowance=3) ## intitialise the game state
         self.full_grid, self.game_board = self._generate_board()
         game_state={"board": copy.deepcopy(self.game_board), "rendered_board": self._get_grid_string_with_indices(self.game_board), "completed": False}
         self.state.reset(game_state=game_state, player_prompt_function=self._generate_player_prompt)
@@ -127,23 +147,8 @@ class SudokuEnv(ta.Env):
             "2. **Only fill** empty cells represented by '.'.\n"
             "3. You may respond in any manner you prefer, but ensure that your response includes the format of '[row column number]'.\n"
             "4. **Ensure** that your move does not violate Sudoku rules. Invalid moves will result in penalties.\n"
-            "Examples:\n"
-            "- **Valid Move**:\n"
-            "  - Grid Snippet Before Move:\n"
-            "  \n"
-            "  - Move: `[5 3 7]`\n"
-            "  - Explanation: Placing 7 at row 5, column 3 does not violate any Sudoku rules.\n\n"
-            "- **Invalid Move** (Overwriting a pre-filled cell):\n"
-            "  - Grid Snippet Before Move:\n"
-            "  \n"
-            "  - Move: `[1 1 9]`\n"
-            "  - Explanation: Cell (1,1) is already filled with 5. You cannot overwrite it.\n\n"
-            "- **Invalid Move** (Violating Sudoku rules):\n"
-            "  - Grid Snippet Before Move:\n"
-            "  \n"
-            "  - Move: `[1 3 5]`\n"
-            "  - Explanation: Placing 5 in row 1, column 3 violates the rule since 5 already exists in row 1.\n\n"
-            "The history of your moves and thoughts will be appended as you play more rounds. Use the history of your move to improve your decision making by avoiding the moves you have tried. Good luck!\n\n"
+            
+            f"You have {self.max_turns} tries to solve the game. Good luck!"
         )
 
 
@@ -155,21 +160,21 @@ class SudokuEnv(ta.Env):
         action_search_pattern = re.compile(r"\[(\d+)\s(\d+)\s(\d+)\]")
         match = action_search_pattern.search(action)
 
-        if not match: self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move format. Player {player_id} did not respond with valid 'row column number'.")
+        if not match: self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move format. Player {player_id} did not respond with valid 'row column number'. Negative reward applied.")
         else:
             row, col, num = map(int, match.groups())
             if row < 1 or row > 9 or col < 1 or col > 9 or num < 1 or num > 9:
-                self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to place {num} at ({row}, {col}), which is out of bounds.")
+                self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to place {num} at ({row}, {col}), which is out of bounds. Negative reward applied.")
             else:
                 row_idx, col_idx = row - 1, col - 1
                 ## check if the cell is already filled in the initial grid
                 if self.state.game_state["board"][row_idx][col_idx] != 0:
-                    self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to overwrite a pre-filled cell ({row}, {col}).")
+                    self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to overwrite a pre-filled cell ({row}, {col}). Negative reward applied.")
                 elif self._is_move_correct(row_idx, col_idx, num):
                     self.state.game_state["board"][row_idx][col_idx] = num ## update the grid
                     self.state.add_observation(message=f"Board state: \n{self._get_grid_string_with_indices()}", observation_type=ta.ObservationType.GAME_BOARD) ## update the observation
                 else:
-                    self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to place {num} at ({row}, {col}), which violates Sudoku rules.")
+                    self.state.set_invalid_move(reward=self._get_percentage_completion(), reason=f"Invalid move. Player {player_id} attempted to place {num} at ({row}, {col}), which violates Sudoku rules. Negative reward applied.")
 
                 ## check if the game is completed
                 if self._is_puzzle_complete():

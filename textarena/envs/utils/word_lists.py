@@ -96,13 +96,13 @@ class EnglishDictionary:
         with (
             importlib.resources.files("textarena.envs.utils.data")
             .joinpath(filename)
-            .open("r") as f
+            .open("r", encoding="utf-8") as f
         ):
             lines = f.readlines()[1:]  # Skip first line (word count)
         with (
             importlib.resources.files("textarena.envs.utils.data")
             .joinpath(acc_filename)
-            .open("r") as f
+            .open("r", encoding="utf-8") as f
         ):
             acc_lines = f.readlines()
         prefixes, suffixes = _parse_affix_rules(acc_lines)
