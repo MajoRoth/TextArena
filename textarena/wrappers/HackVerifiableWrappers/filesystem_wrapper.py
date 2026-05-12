@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import textarena as ta
 from textarena.core import ObservationType
-from textarena.wrappers.HackWrappers.virtual_fs import VirtualFS
+from textarena.wrappers.HackVerifiableWrappers.virtual_fs import VirtualFS
 
 
 class FilesystemWrapper(ta.Wrapper):
