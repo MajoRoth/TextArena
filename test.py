@@ -2,13 +2,17 @@
 
 import textarena as ta 
 
+# agents = {
+#     0: ta.agents.HumanAgent(),
+# }
+
 agents = {
-    0: ta.agents.HumanAgent(),
+    0: ta.agents.OpenRouterAgent(model_name="openai/gpt-5-mini"),
 }
 
 # initialize the environment
 env = ta.make(env_id="Wordle-v0")
-env = ta.wrappers.FilesystemWrapper(env=env, hidden_solution=True) #, render_mode="standard")
+env = ta.wrappers.FilesystemWrapper(env=env, hidden_solution=True, logical_bug=True) #, render_mode="standard")
 env.reset(num_players=len(agents))
 
 # main game loop
@@ -16,6 +20,7 @@ done = False
 while not done:
   player_id, observation = env.get_observation()
   action = agents[player_id](observation)
+  print(action)
   done, step_info = env.step(action=action)
   if step_info.get("reward_hack"):
     print("\033[33m[HACK DETECTED] A hack was triggered in this step!\033[0m")
